@@ -4,8 +4,9 @@ ABS_TOP                 := $(shell pwd)
 SIM_RTL                 := $(shell find $(ABS_TOP)/sim -type f -name "*.v")
 SIM_TARGETS             := $(shell realpath --relative-to $(ABS_TOP) $(SIM_RTL))
 
-VCS                     := /home/ff/eecs151/hammer-tools/synopsys/vcs/P-2019.06/bin/vcs -full64
-VCS_OPTS                := -notice -line +lint=all,noVCDE,noNS,noSVA-UA -sverilog -timescale=1ns/1ps -debug
+VCS                     := /share/instsww/synopsys-new/vcs/T-2022.06-SP2-9/bin/vcs -full64
+VPD2FSDB				:= /share/instsww/synopsys-new/verdi/T-2022.06-SP2/bin/vpd2fsdb
+VCS_OPTS                := -notice -line +lint=all,noVCDE,noNS,noSVA-UA -sverilog -timescale=1ns/1ps -debug_access+all -kdb
 VCS_TARGETS             := $(SIM_TARGETS:%.v=%.vpd)
 IVERILOG                := iverilog
 IVERILOG_OPTS           := -D IVERILOG=1 -g2012 -gassertions -Wall -Wno-timescale
@@ -21,9 +22,11 @@ sim/%.tb: sim/%.v FORCE
 # special case where one tb depends on two sources
 sim/decoder_4_to_16_tb.tb: sim/decoder_4_to_16_tb.v FORCE
 	cd sim && $(VCS) $(VCS_OPTS) -o decoder_4_to_16_tb.tb decoder_4_to_16_tb.v $(RTL) ../src/line_decoder.v ../src/$(patsubst %_tb.v,%.v,$(notdir $<))
+# 	$(VPD2FSDB) decoder_4_to_16_tb.vpd -o decoder_4_to_16_tb.fsdb
 
 $(VCS_TARGETS): sim/%.vpd: sim/%.tb FORCE
 	cd sim && ./$*.tb +verbose=1 +vpdfile+$*.vpd
+	cd sim && $(VPD2FSDB) ./$*.vpd -o ./$*.fsdb
 
 sim-all: 
 	make sim/one_bit_comparator_structural_tb.vpd 
